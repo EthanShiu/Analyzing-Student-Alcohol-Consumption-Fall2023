@@ -1,0 +1,367 @@
+---
+title: "Student Alcohol Consumption Analysis"
+author: "Ethan Shiu"
+date: "2023-12-01"
+output: html_document
+---
+
+```{r init, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(MASS)
+
+
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, echo = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+
+```{r}
+df <- read.csv("data/student-por.csv")
+df <- df[, c("studytime", "activities", "freetime", "goout", "Dalc", "Walc")]
+af <- df
+df$activities[df$activities == "no"] <- 0
+df$activities[df$activities == "yes"] <- 1
+df$activities <- as.integer(df$activities)
+```
+
+# Exploratory Data Analysis
+
+In order to investigate our question, we ran a series of statistical tests on our chosen variables. Because our variables are mostly ordinal variables with 5 levels we decided to use both the Chi-squared test of independence and the Spearman correlation test to determine the relationship between our variables and student's Weekend and Workday alcohol consumption. For all of our Chi-Squared tests our Null Hypothesis H_O: states that the two variables are independent of each other and our Alternative Hypothesis H_a: states that the two variables are not independent of each other. For all of our Correlation Tests, our Null Hypothesis H_O: states that the correlation coefficient for the two variables is equal to 0 (r = 0) while our Alternative Hypotheses H_a: states that the correlation coefficient for the two variables is not equal to 0 (r != 0). For these tests we will be using the standard alpha value of 0.05. 
+
+## Study Time
+
+First We looked at the study time variable. This was again an ordinal variable levels 1 to 4 that represented a student's amount of time spent studying weekly. The survey categorized these levels by ranges of hours with 1 being less than 2 hours spent, 2 being 2 to 5 hours spent, 3 being 5 to 10 hours spent, and 4 being greater than 10 hours spent studying.
+
+### Studytime & Weekend Alcohol Consumption
+
+```{r, results = 'markup'}
+
+#Chi test for independence
+st_contable <- table(df$studytime, df$Walc)
+chi_st <- chisq.test(st_contable)
+chi_st
+#Very small p value 4e-07 ~ reject the null ~ they are not independent
+
+#Cor Test
+cor_st <- cor.test(df$Walc, df$studytime, method = "spearman")
+cor_st 
+# low p value 3.211e-08 ~ reject null ~ true correlation is not equal 0 ~ -0.215 correlation coefficient, negative correlation
+```
+Conducting a chi-squared test of independence comparing Study Time to Weekend alcohol consumption, returned a p value of `r chi_st$p.value`. This is much smaller than our alpha of 0.05 thus we reject the Null Hypothesis and accept the Alternative Hypothesis. This means that the Study Time variable is not independent of a student's weekend alcohol consumption. Our Spearman correlation test returned a p value of `r cor_st$p.value` which is also much smaller than our alpha of 0.05. Rejecting the Null and accepting the Alternative, we can say that the correlation between Study Time and Weekend Alcohol Consumption is not equal to 0. From our correlation test we can see that the rho value is `r cor_st$estimate`. Thus Study Time has a negative correlation with Weekend Alcohol consumption. 
+
+```{r}
+#mosaic plot
+ggplot(df, aes(x = factor(studytime), fill = factor(Walc))) +
+  geom_bar(position = "fill") +
+  labs(x = "Studytime", y = "Proportion", fill = "Weekend Alcohol Consumption", title = "Mosaic Plot: Study Time and Weekend Alcohol Consumption") +
+  theme_minimal()
+```
+
+### Studytime & Workday Alcohol Consumption
+
+```{r, results = 'markup'}
+#Chi test for independence
+st_contable <- table(df$studytime, df$Dalc)
+chi_st <- chisq.test(st_contable)
+chi_st
+#Very small p value 2e-04 ~ reject the null ~ they are not independent
+
+#Cor Test
+cor_st <- cor.test(df$Dalc, df$studytime, method = "spearman")
+cor_st 
+# low p value 4e-04 ~ reject null ~ true correlation is not equal 0 ~ -0.138  correlation coefficient, negative correlation
+```
+
+Running the same tests on Study Time and Workday alcohol consumption, our Chi-squared test returned a p value of `r chi_st$p.value`. This was less than our alpha of 0.05 so we reject the Null Hypothesis and accept the Alternative Hypothesis: Study Time and Workday Alcohol Consumption are not independent. Our Correlation test returned a p value of `r cor_st$p.value` which is likewise less than 0.05. Rejecting the Null Hypothesis and accepting the Alternative means that the correlation between Study Time and Workday Alcohol Consumption is not equal to 0. The Rho from our Correlation test is `r cor_st$estimate` which is negative meaning that Study Time and Workday Alcohol Consumption have a negative correlation as well. 
+
+```{r}
+#mosaic plot
+ggplot(df, aes(x = factor(studytime), fill = factor(Dalc))) +
+  geom_bar(position = "fill") +
+  labs(x = "Studytime", y = "Proportion", fill = "Workday Alcohol Consumption", title = "Mosaic Plot: Study Time and Workday Alcohol Consumption") +
+  theme_minimal()
+```
+
+Both these findings are demonstrated decently well in the mosaic plots dispayed above. With both Weekend and Workday alcohol consumption graphs, as we move higher on the 4 point scale of weekly amount of time spent studying, the number of respondents who reported the lowest level of alcohol consumption for both the Workday and the Weekend increases while the respondents who report higher levels of alcohol consumption for the Workday and Weekend, for the most part, decreases. 
+
+## Free Time
+
+Next we looked at Student's free time. This variable represented a student's reported level of free time overall. This was another ordinal variable that spanned a scale from 1 (very low amounts of free time) to 5 (very high amounts of free time). 
+
+### Freetime & Weekend Alcohol Consumption
+
+```{r, results = 'markup'}
+#Chi test for independence
+ft_contable <- table(df$freetime, df$Walc)
+chi_ft <- chisq.test(ft_contable)
+chi_ft
+#Very small p value ~ 4.273e-07 ~ reject the null ~ they are not independent
+
+#Cor Test
+cor_ft <- cor.test(df$Walc, df$freetime, method = "spearman")
+cor_ft
+# low p value 0.002151 ~ reject null ~ true correlation is not equal to 0 ~ 1.202439 correlation coefficient, positive correlation
+```
+
+Running our Chi-squared test to compare Free Time with Weekend Alcohol Consumption, we got a p value of `r chi_ft$p.value` which was lower than our 0.05 alpha. Rejecting the Null Hypothesis and accepting the Alternative Hypothesis we state that Free Time is not independent of Weekend Alcohol consumption. Running our Correlation test for these variables we got a p value of `r cor_ft$p.value` which was likewise smaller than our 0.05 alpha. Rejecting the Null and accepting the Alternative, we state that the correlation between Free Time and Weekend Alcohol Consumption is not equal to 0. the Correlation test gave us a rho value of `r cor_ft$estimate` which means that the correlation between the variables is positive.
+
+```{r}
+#mosaic plot
+ggplot(df, aes(x = factor(freetime), fill = factor(Walc))) +
+  geom_bar(position = "fill") +
+  labs(x = "Free Time", y = "Proportion", fill = "Weekend Alcohol Consumption", title = "Mosaic Plot: Free Time and Weekend Alcohol Consumption") +
+  theme_minimal()
+```
+
+### Freetime & Workday Alcohol Consumption
+```{r, results = 'markup'}
+#Chi test for independence
+ft_contable <- table(df$freetime, df$Dalc)
+chi_ft <- chisq.test(ft_contable)
+chi_ft
+#Very small p value ~ 2e-04 ~ reject the null ~ they are not independent
+
+#Cor Test
+cor_ft <- cor.test(df$Dalc, df$freetime, method = "spearman")
+cor_ft
+# low p value 0.005 ~ reject null ~ true correlation is not equal to 0 ~ 0.11  correlation coefficient, positive correlation
+```
+
+Running the same tests in comparison with Workday Alcohol consumption yielded similar results. Our Chi squared test returned a p value of `r chi_ft$p.value` and our Correlation test returned a p value of `r cor_ft$p.value`, both of which are small enough to reject the Null Hypothesis. Thus Free Time and Workday Alcohol consumption are not independent of each other and their correlation is not equal to 0. The correlation test gave us a rho value of `r cor_ft$estimate` so the two variables have a positive correaltion. 
+
+```{r}
+#mosaic plot
+ggplot(df, aes(x = factor(freetime), fill = factor(Dalc))) +
+  geom_bar(position = "fill") +
+  labs(x = "Free Time", y = "Proportion", fill = "Workday Alcohol Consumption", title = "Mosaic Plot: Free Time and Workday Alcohol Consumption") +
+  theme_minimal()
+```
+
+This is seen decently well in the mosaic plots above. For both Workday and Weekend Alcohol consumption, as we move up on the 5 point scale of free time, the share of respondents who report having a very low level of alcohol consumption decreases while the share of respondents who report having higher alcohol consumption, in general, increases. 
+
+## Frequency Going Out With Friends
+
+Third, we conducted these same tests on the Goout variable. This variable measured the frequency at which the student went out with friends. It is another ordinal variable ranging from 1 (very infrequently) to 5 (very frequently).
+
+### Goout & Weekend Alcohol Consumption
+
+```{r, results = 'markup'}
+#Chi test for independence
+go_contable <- table(df$goout, df$Walc)
+chi_go <- chisq.test(go_contable)
+chi_go
+#Very small p value ~ 2.2e-16 ~ reject the null ~ they are not independent
+
+#Cor Test
+cor_go <- cor.test(df$Walc, df$goout, method = "spearman")
+cor_go
+# low p value 2.2e-16 ~ reject null ~ true correlation is not equal to 0 ~ 0.3886798 correlation coefficient, positive correlation
+```
+
+We conducted the same tests on the Goout variable. Comparing Goout to Weekend Alcohol consumption, our Chi-sqared test returned a p value of `r chi_go$p.value` and our Correlation test returned a p value of `r cor_go$p.value` which are both much smaller than our 0.05 alpha. Thus we reject the Null and accept the Alternative stating that Goout and Weekend Alcohol consumption are not independent, and their correlation is not equal to 0. The Correlation test returned a rho of `r cor_go$estimate` which means that their correlation is positive.
+
+```{r}
+#mosaic plot
+ggplot(df, aes(x = factor(goout), fill = factor(Walc))) +
+  geom_bar(position = "fill") +
+  labs(x = "Go Out", y = "Proportion", fill = "Weekend Alcohol Consumption", title = "Mosaic Plot: Frequency Going Out and Weekend Alcohol Consumption") +
+  theme_minimal()
+
+```
+
+### Goout & Workday Alcohol Consumption
+
+```{r, results = 'markup'}
+#Chi test for independence
+go_contable <- table(df$goout, df$Dalc)
+chi_go <- chisq.test(go_contable)
+chi_go
+#Very small p value ~ 4e-06 ~ reject the null ~ they are not independent
+
+#Cor Test
+cor_go <- cor.test(df$Dalc, df$goout, method = "spearman")
+cor_go
+# low p value 2e-10 ~ reject null ~ true correlation is not equal to 0 ~ 0.245 correlation coefficient, positive correlation
+```
+
+We got similar results for Workday Alcohol consumption. The Chi_squared test had a p value of `r chi_go$p.value` and the Correlation test had a p value of `r cor_go$p.value` both of which were smaller than our 0.05 alpha. Thus we reject the Null and Accept the Alternative and state that Goout and Wokrday Alcohol consumption are not independent and that their correlation is not equal to 0. The Correlation test gave us a rho of `r cor_go$estimate` which means that these variables also have a positive correlation
+
+```{r}
+#mosaic plot
+ggplot(df, aes(x = factor(goout), fill = factor(Dalc))) +
+  geom_bar(position = "fill") +
+  labs(x = "Go Out", y = "Proportion", fill = "Workday Alcohol Consumption", title ="Mosaic Plot: Going out and Workday Alcohol Consumption") +
+  theme_minimal()
+```
+
+This is very clearly demonstrated in our Mosaic Plot. As we move up on the 5 point scale towards more frequency going out with friends, the share of respondents who reported low alcohol use decreases while the share of respondents who reported high alcohol use increases for both Workday and Weekend Alcohol consumption.
+
+## Extracurricular Activities
+
+Lastly we ran these tests on the Extracurricular Activities variable. This one was a binary variable representing whether or not students participated in Extracurricular Activities or not with 0 corresponding to a 'No' response and 1 corresponding to a 'Yes' response.
+
+### Activities & Weekend Alcohol Consumption
+
+```{r, results = 'markup'}
+#Chi test for independence
+a_contable <- table(df$activities, df$Walc)
+chi_a <- chisq.test(a_contable)
+chi_a
+#Large P value ~ 0.1362 ~ not enough evidence to reject the null ~ they may be independent
+
+#Cor Test
+cor_a <- cor.test(df$Walc, df$activities, method = "spearman")
+cor_a
+# Large P value 0.4038 ~ not enough evidence to reject null ~ true correlation may be equal to 0
+```
+
+Running our statistical tests with both Activities and Weekend Alcohol consumption, we got relatively high p values. The Chi-squared test for independence returned a p value of `r chi_a$p.value` which is larger than our alpha value of 0.05. This means that we do not have enough evidence to reject the null hypothesis which states that Activities and Weekend Alcohol consumption are independent. Similarly, our Correlation test returned a p value of `r cor_a$estimate` which was also larger than our 0.05 alpha so we do not have enough evidence to reject our Null hypothesis which states that the correlation between Activities and Weekend Alcohol consumption is equal to 0. 
+
+```{r}
+# Assuming 'df' is your dataframe containing 'activities' and 'Walc'
+
+# Calculate proportions
+proportions <- df %>%
+  group_by(activities, Walc) %>%
+  summarise(count = n()) %>%
+  mutate(proportion = count / sum(count))
+
+# Create a proportion histogram
+ggplot(proportions, aes(x = factor(Walc), y = proportion, fill = factor(activities))) +
+  geom_bar(stat = "identity", position = "dodge", alpha = 1) +
+  labs(x = "Weekend Alcohol Consumption", y = "Proportion", title = "Proportion Histogram: Weekend Alcohol Consumption by Activities")
+
+
+```
+### Activities & Workday Alcohol Consumption
+
+Testing comparing Activities to Workday Alcohol consumption yielded the same results. The p value for the Chi-squared test was `r chi_a$p.value` while the p value for the Correlation test was `r cor_a$p.value` which were both also greater than our 0.05 alpha. Thus we likewise have insufficient evidence to reject the Null Hypotheses that Activities and Workday Alcohol consumption are independent and have a correlation equal to 0. 
+
+```{r, results = 'markup'}
+#Chi test for independence
+a_contable <- table(df$activities, df$Dalc)
+chi_a <- chisq.test(a_contable)
+chi_a
+#Small P value ~ 0.4 ~ reject Null hypothesis ~ They are not independent
+
+#Cor Test
+cor_a <- cor.test(df$Dalc, df$activities, method = "spearman")
+cor_a
+# Large P value 0.6 ~ not enough evidence to reject null ~ true correlation may be equal to 0
+```
+
+```{r}
+# Assuming 'df' is your dataframe containing 'activities' and 'Dalc'
+
+# Calculate proportions
+proportions <- df %>%
+  group_by(activities, Dalc) %>%
+  summarise(count = n()) %>%
+  mutate(proportion = count / sum(count))
+
+# Create a proportion histogram
+ggplot(proportions, aes(x = factor(Dalc), y = proportion, fill = factor(activities))) +
+  geom_bar(stat = "identity", position = "dodge", alpha = 1) +
+  labs(x = "Workday Alcohol Consumption", y = "Proportion", title = "Proportion Histogram: Workday Alcohol Consumption by Activities")
+
+```
+
+This is captured well in the proportion histograms shown above. For both the Workday and Weekend Alcohol consumption histograms, there does not seem to be a significant difference in percentage points between the reported alcohol consumption between those who participate in extracurricular activities and those who do not.
+
+## Correlation Plot
+
+```{r}
+matrix <- cor(df, method = "spearman")
+corrplot(matrix, method = "circle", tl.col = "black")
+corrplot(matrix, method = "number", tl.col = "black")
+```
+
+To summarize our findings generally we made this Spearman correlation plot. This demonstrates most of what we explained in the sections above. Study Time has a negative correlation with Weekend and Workday Alcohol consumption while Free Time and Goout have a positive correlation with Weekend and Workday Alcohol consumption. Activities does show a correlation coefficient on the matrix, but from our testing we know that the p values are not high enough for us to come to a definitive conclusion on the relationship between Activities and Weekend or Workday Alcohol consumption. 
+
+## Ordinal Logistic Regression Model
+
+*Weekend Alcohol Consumption Ordinal Logit Regression Model*
+
+```{r, results = 'markup'}
+# Fit an ordinal logistic regression model
+Walc_ord <- polr(factor(Walc) ~ factor(studytime) + factor(activities) + factor(freetime) + factor(goout), data = df, Hess = TRUE)
+
+# Summary of the model
+summary(Walc_ord)
+```
+
+*Workday Alcohol Consumption Ordinal Logit Regression Model*
+
+```{r, results = 'markup'}
+# Fit an ordinal logistic regression model
+Dalc_ord <- polr(factor(Dalc) ~ factor(studytime) + factor(activities) + factor(freetime) + factor(goout), data = df, Hess = TRUE)
+
+# Summary of the model
+summary(Dalc_ord)
+
+```
+
+After running these tests we created a regression model to allow us to run predictions. We decided to use an Ordinal Logistic Regression Model as we have ordinal Y variables as well as multiple ordinal X variables that we do not expect to have a strictly linear pattern. In order to evaluate the validity of our regression model, we used a D-Somers pseudo r-squared value to determine how much of the variance within the data is explained by our model. Because we have 5 levels to our Y variables, each model had 5 different D-Somers values, one for each level. 
+
+*Weekend Alcohol Consumption D-Somers*
+```{r, results = 'markup'}
+# Predicted values from the model
+predicted_w <- predict(Walc_ord, type = "probs")
+
+# Calculating Somers' D pseudo R-squared manually
+# Extracting the response variable
+response_w <- as.numeric(df$Walc)
+
+# Calculating Somers' D
+D_somers_w <- 1 - (cor(response_w, predicted_w))^2 * 2
+
+D_somers_w
+
+```
+
+Our Weekend Alcohol consumption model had pseudo r-squared values that ranged from around 0.6 to 0.9. The average D-Somers value was 0.708. On average, our Weekend Alcohol consumption model accounted for about 0.708 of the variance in the dataset. 
+
+*Workday Alcohol Consumption D-Somers*
+
+```{r, results = 'markup'}
+# Predicted values from the model
+predicted_d <- predict(Dalc_ord, type = "probs")
+
+# Calculating Somers' D pseudo R-squared manually
+# Extracting the response variable
+response_d <- as.numeric(df$Dalc)
+
+# Calculating Somers' D
+D_somers_d <- 1 - (cor(response_d, predicted_d))^2 * 2
+
+D_somers_d
+
+```
+
+Our Workday Alcohol consumption model performed better. Pseudo r-squared values ranged from 0.788 to 0.826 and the mean of the 5 values was 0.8. Thus, on average, our Workday Alcohol consumption model accounted for about 0.8 of the variance in the dataset.
+
+## Prediction
+
+*Weekend Alcohol Consumption Prediction*
+
+```{r,results = 'markup'}
+#What is the chance of workday alcohol consumption for a student who has 1 as their study time, 5 as their going out time, and 3 as their free time? 
+newdata1 <- data.frame(studytime = 1, goout = 5, freetime = 3, activities = 1)
+predict(Walc_ord, newdata = newdata1, type = "class")
+```
+
+*Workday Alcohol Consumption Prediction*
+
+```{r, results = 'markup'}
+predict(Dalc_ord, newdata = newdata1, type = "class")
+```
+
+We also ran our own prediction using the models. We wanted to know what level of Alcohol Consumption a student would have if they studied less than 2 hours weekly (studytime = 1), go out with friends very often (goout = 5), have a medium amount of free time (freetime = 3), and participate in extracurricular activities (activities = 1). Our model predicted that the student would have a level 4 (high) level of Weekend Alcohol consumpiton, and a level 1 (very low) Workday Alcohol consumption. 
